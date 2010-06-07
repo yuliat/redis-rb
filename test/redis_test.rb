@@ -1140,8 +1140,12 @@ class RedisTest < Test::Unit::TestCase
     test "WATCH with a modified key" do
       @r.watch "foo"
       @r.set "foo", "s1"
-      res = @r.multi do |multi|
-        multi.set "foo", "s2"
+
+      begin
+        res = @r.multi do |multi|
+          multi.set "foo", "s2"
+        end
+      rescue Redis::CannotExec
       end
 
       assert_nil res
@@ -1157,6 +1161,92 @@ class RedisTest < Test::Unit::TestCase
       end
 
       assert_equal "s2", @r.get("foo")
+    end
+
+    test "WATCH with a block" do
+      @r.set "foo", "s1"
+
+      @r.watch "foo" do
+        value = @r.get("foo").succ
+
+        @r.multi do
+          @r.set "foo", value
+        end
+      end
+
+      assert_equal "s2", @r.get("foo")
+    end
+
+    test "WATCH with a block and a modified key" do
+      @r.set "foo", "s1"
+
+      begin
+        @r.watch "foo" do
+          @r.set "foo", "s3"
+
+          @r.multi do
+            @r.set "foo", "s2"
+          end
+        end
+      rescue Redis::CannotExec
+      end
+
+      assert_equal "s3", @r.get("foo")
+    end
+
+    test "WATCH with a block raises on a failed EXEC" do
+      @r.set "foo", "s1"
+
+      assert_raises(Redis::CannotExec) do
+        @r.watch "foo" do
+          @r.set "foo", "s3"
+
+          @r.multi do
+            @r.set "foo", "s2"
+          end
+        end
+      end
+    end
+
+    test "WATCH a failed EXEC can be retried" do
+      @r.set "foo", "s1"
+
+      times = 0
+
+      begin
+        @r.watch "foo" do
+          @r.set "foo", "s3" if times == 0
+
+          @r.multi do
+            @r.set "foo", "s2"
+          end
+        end
+      rescue Redis::CannotExec
+        times += 1
+        retry
+      end
+
+      assert_equal 1, times
+      assert_equal "s2", @r.get("foo")
+    end
+
+    test "subsequent WATCHes do not mix" do
+      @r.set "foo", "s1"
+      @r.set "bar", "s2"
+
+      @r.watch "foo" do
+        # ...
+      end
+
+      @r.watch "bar" do
+        @r.set "foo", "s3"
+
+        @r.multi do
+          @r.set "bar", "s4"
+        end
+      end
+
+      assert_equal "s4", @r.get("bar")
     end
   end
 

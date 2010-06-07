@@ -9,6 +9,12 @@ class Redis
     end
   end
 
+  class CannotExec < RuntimeError
+    def initialize
+      super "EXEC failed because any of the WATCHed keys has been modified."
+    end
+  end
+
   def self.deprecate(message, trace = caller[0])
     $stderr.puts "\n#{message} (in #{trace})"
   end
@@ -463,7 +469,14 @@ class Redis
   end
 
   def watch(*keys)
-    @client.call(:watch, *keys)
+    result = @client.call(:watch, *keys)
+    return result unless block_given?
+
+    begin
+      yield
+    ensure
+      unwatch
+    end
   end
 
   def unwatch
@@ -486,7 +499,7 @@ class Redis
       raise e
     end
 
-    exec
+    exec || (raise CannotExec)
   end
 
   def publish(channel, message)
