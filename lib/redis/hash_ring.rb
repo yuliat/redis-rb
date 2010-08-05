@@ -129,3 +129,5 @@ class Redis
 
   end
 end
+
+export(Redis::HashRing)

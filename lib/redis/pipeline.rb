@@ -11,3 +11,5 @@ class Redis
     end
   end
 end
+
+export(Redis::Pipeline)

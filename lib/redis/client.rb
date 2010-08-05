@@ -295,3 +295,5 @@ class Redis
     end
   end
 end
+
+export(Redis::Client)

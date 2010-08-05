@@ -1,4 +1,4 @@
-require "redis/hash_ring"
+Redis::HashRing = import("redis/hash_ring")
 
 class Redis
   class Distributed
@@ -520,3 +520,5 @@ class Redis
     end
   end
 end
+
+export(Redis::Distributed)

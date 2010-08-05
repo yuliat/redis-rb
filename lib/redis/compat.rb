@@ -2,7 +2,7 @@
 # Ruby 1.9 and not in earlier versions.
 
 unless [].respond_to?(:product)
-  class Array
+  class ::Array
     def product(*enums)
       enums.unshift self
       result = [[]]

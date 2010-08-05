@@ -1,7 +1,8 @@
 require 'socket'
+require 'cargo'
 
 class Redis
-  VERSION = "2.0.5"
+  VERSION = "2.1.0"
 
   class ProtocolError < RuntimeError
     def initialize(reply_type)
@@ -620,10 +621,12 @@ private
       @client = original
     end
   end
-
 end
 
-require 'redis/client'
-require 'redis/pipeline'
-require 'redis/subscribe'
 require 'redis/compat'
+
+Redis::Client = import("redis/client")
+Redis::Pipeline = import("redis/pipeline")
+Redis::SubscribedClient = import("redis/subscribe")
+
+export(Redis)

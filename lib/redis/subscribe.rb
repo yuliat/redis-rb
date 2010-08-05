@@ -77,3 +77,5 @@ class Redis
     end
   end
 end
+
+export(Redis::SubscribedClient)
