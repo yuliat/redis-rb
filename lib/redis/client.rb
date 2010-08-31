@@ -59,7 +59,10 @@ class Redis
     def process(*commands)
       logging(commands) do
         ensure_connected do
-          @sock.write(join_commands(commands))
+          with_timeout do
+            @sock.write(join_commands(commands))
+          end
+
           yield if block_given?
         end
       end
@@ -211,7 +214,7 @@ class Redis
     end
 
     def connect_to(host, port)
-      with_timeout(@timeout) do
+      with_timeout do
         @sock = TCPSocket.new(host, port)
       end
 
@@ -272,7 +275,7 @@ class Redis
     begin
       require "system_timer"
 
-      def with_timeout(seconds, &block)
+      def with_timeout(seconds = @timeout, &block)
         SystemTimer.timeout_after(seconds, &block)
       end
 
@@ -281,7 +284,7 @@ class Redis
 
       require "timeout"
 
-      def with_timeout(seconds, &block)
+      def with_timeout(seconds = @timeout, &block)
         Timeout.timeout(seconds, &block)
       end
     end

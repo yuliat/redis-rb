@@ -84,6 +84,16 @@ class RedisTest < Test::Unit::TestCase
       end
     end
 
+    test "Timeout on write" do
+      server = TCPServer.new("127.0.0.1", 6381)
+
+      r = Redis.new(OPTIONS.merge(:timeout => 1, :port => 6381, :db => 0))
+
+      assert_raises(Timeout::Error) do
+        r.set("foo", "1" * 128 * 1024)
+      end
+    end
+
     test "Connection timeout" do
       assert_raises(Timeout::Error) do
         Redis.new(OPTIONS.merge(:host => "127.0.0.2", :timeout => 1)).ping
