@@ -3,6 +3,7 @@ $:.unshift File.join(File.dirname(__FILE__), '..', 'lib')
 require "test/unit"
 require "logger"
 require "stringio"
+require "cargo"
 
 begin
   require "ruby-debug"
@@ -109,7 +110,7 @@ end
 
 $VERBOSE = true
 
-require "redis"
+Redis = import("redis")
 
 def capture_stderr
   stderr = $stderr
