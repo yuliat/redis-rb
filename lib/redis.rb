@@ -2,7 +2,7 @@ require 'socket'
 require 'cargo'
 
 class Redis
-  VERSION = "2.1.0"
+  VERSION = "2.0.7"
 
   class ProtocolError < RuntimeError
     def initialize(reply_type)
@@ -23,10 +23,10 @@ class Redis
 
     url = URI(options.delete(:url) || ENV["REDIS_URL"] || "redis://127.0.0.1:6379/0")
 
-    options[:host]     = url.host
-    options[:port]     = url.port
-    options[:password] = url.password
-    options[:db]       = url.path[1..-1].to_i
+    options[:host]     ||= url.host
+    options[:port]     ||= url.port
+    options[:password] ||= url.password
+    options[:db]       ||= url.path[1..-1].to_i
 
     new(options)
   end
@@ -342,7 +342,7 @@ class Redis
   end
 
   def del(*keys)
-    _bool @client.call(:del, *keys)
+    @client.call(:del, *keys)
   end
 
   def rename(old_name, new_name)
@@ -355,6 +355,10 @@ class Redis
 
   def expire(key, seconds)
     _bool @client.call(:expire, key, seconds)
+  end
+
+  def persist(key)
+    _bool @client.call(:persist, key)
   end
 
   def ttl(key)

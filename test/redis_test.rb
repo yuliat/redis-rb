@@ -24,7 +24,7 @@ class RedisTest < Test::Unit::TestCase
       assert_nil redis.client.password
     end
 
-    test "takes a url" do
+    test "takes a URL" do
       redis = Redis.connect :url => "redis://:secr3t@foo.com:999/2"
 
       assert_equal "foo.com", redis.client.host
@@ -33,7 +33,16 @@ class RedisTest < Test::Unit::TestCase
       assert_equal "secr3t", redis.client.password
     end
 
-    test "doesn not modify the passed options" do
+    test "overrides the URL if another connection option is passed" do
+      redis = Redis.connect :url => "redis://:secr3t@foo.com:999/2", :port => 1000
+
+      assert_equal "foo.com", redis.client.host
+      assert_equal 1000, redis.client.port
+      assert_equal 2, redis.client.db
+      assert_equal "secr3t", redis.client.password
+    end
+
+    test "does not modify the passed options" do
       options = { :url => "redis://:secr3t@foo.com:999/2" }
 
       redis = Redis.connect(options)
@@ -201,11 +210,11 @@ class RedisTest < Test::Unit::TestCase
 
       assert_equal ["bar", "baz", "foo"], @r.keys("*").sort
 
-      @r.del "foo"
+      assert_equal 1, @r.del("foo")
 
       assert_equal ["bar", "baz"], @r.keys("*").sort
 
-      @r.del "bar", "baz"
+      assert_equal 2, @r.del("bar", "baz")
 
       assert_equal [], @r.keys("*").sort
     end
@@ -288,6 +297,14 @@ class RedisTest < Test::Unit::TestCase
       assert_equal nil, @r.get("foo")
     end
 
+    test "PERSIST" do
+      @r.set("foo", "s1")
+      @r.expire("foo", 1)
+      @r.persist("foo")
+
+      assert_equal(-1, @r.ttl("foo"))
+    end
+
     test "TTL" do
       @r.set("foo", "s1")
       @r.expire("foo", 1)
@@ -366,7 +383,7 @@ class RedisTest < Test::Unit::TestCase
           assert_equal str, @r.get("foo")
         end
       end
-    end
+    end if defined?(Encoding)
 
     test "SETEX" do
       @r.setex("foo", 1, "s1")
@@ -606,9 +623,9 @@ class RedisTest < Test::Unit::TestCase
         redis.lpush("foo", "s3")
       end
 
-      assert_equal @r.blpop("foo", 0.1), ["foo", "s2"]
-      assert_equal @r.blpop("foo", 0.1), ["foo", "s1"]
-      assert_equal @r.blpop("foo", 0.4), ["foo", "s3"]
+      assert_equal ["foo", "s2"], @r.blpop("foo", 1)
+      assert_equal ["foo", "s1"], @r.blpop("foo", 1)
+      assert_equal ["foo", "s3"], @r.blpop("foo", 1)
 
       thread.join
     end
@@ -623,9 +640,9 @@ class RedisTest < Test::Unit::TestCase
         redis.rpush("foo", "s3")
       end
 
-      assert_equal @r.brpop("foo", 0.1), ["foo", "s2"]
-      assert_equal @r.brpop("foo", 0.1), ["foo", "s1"]
-      assert_equal @r.brpop("foo", 0.4), ["foo", "s3"]
+      assert_equal ["foo", "s2"], @r.brpop("foo", 1)
+      assert_equal ["foo", "s1"], @r.brpop("foo", 1)
+      assert_equal ["foo", "s3"], @r.brpop("foo", 1)
 
       t.join
     end
@@ -650,9 +667,9 @@ class RedisTest < Test::Unit::TestCase
         redis.lpush("queue3", "job3")
       end
 
-      assert_equal @r.blpop("queue1", "queue2", "queue3", 0.1), ["queue1", "job1"]
-      assert_equal @r.blpop("queue1", "queue2", "queue3", 0.1), ["queue2", "job2"]
-      assert_equal @r.blpop("queue1", "queue2", "queue3", 0.6), ["queue3", "job3"]
+      assert_equal ["queue1", "job1"], @r.blpop("queue1", "queue2", "queue3", 1)
+      assert_equal ["queue2", "job2"], @r.blpop("queue1", "queue2", "queue3", 1)
+      assert_equal ["queue3", "job3"], @r.blpop("queue1", "queue2", "queue3", 1)
 
       t.join
     end
@@ -682,6 +699,25 @@ class RedisTest < Test::Unit::TestCase
           redis.blpop "foo", 1
         end
       end
+    end
+
+    test "BLPOP should try to reconnect when disconnected by Redis" do
+      times = 0
+
+      replies = {
+        :blpop => lambda do |*_|
+          times += 1
+          "+OK" if times > 2
+        end
+      }
+
+      redis_mock(replies) do
+        assert_equal "OK", Redis.new(OPTIONS.merge(:port => 6380)).blpop("foo", 0)
+      end
+    end
+
+    test "BLPOP with a timeout should return nil when hitting the timeout" do
+      assert_equal nil, @r.blpop("foo", 1)
     end
   end
 

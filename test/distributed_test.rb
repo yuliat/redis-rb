@@ -63,11 +63,11 @@ class RedisDistributedTest < Test::Unit::TestCase
 
       assert_equal ["bar", "baz", "foo"], @r.keys("*").sort
 
-      @r.del "foo"
+      assert_equal [1], @r.del("foo")
 
       assert_equal ["bar", "baz"], @r.keys("*").sort
 
-      @r.del "bar", "baz"
+      assert_equal [2], @r.del("bar", "baz")
 
       assert_equal [], @r.keys("*").sort
     end
@@ -142,6 +142,14 @@ class RedisDistributedTest < Test::Unit::TestCase
       sleep 2
 
       assert_equal nil, @r.get("foo")
+    end
+
+    test "PERSIST" do
+      @r.set("foo", "s1")
+      @r.expire("foo", 1)
+      @r.persist("foo")
+
+      assert_equal(-1, @r.ttl("foo"))
     end
 
     test "TTL" do
@@ -347,7 +355,7 @@ class RedisDistributedTest < Test::Unit::TestCase
           assert_equal str, @r.get("foo")
         end
       end
-    end
+    end if defined?(Encoding)
 
     test "SETEX" do
       @r.setex("foo", 1, "s1")
@@ -565,9 +573,9 @@ class RedisDistributedTest < Test::Unit::TestCase
         redis.lpush("foo", "s3")
       end
 
-      assert_equal @r.blpop("foo", 0.1), ["foo", "s2"]
-      assert_equal @r.blpop("foo", 0.1), ["foo", "s1"]
-      assert_equal @r.blpop("foo", 0.4), ["foo", "s3"]
+      assert_equal ["foo", "s2"], @r.blpop("foo", 1)
+      assert_equal ["foo", "s1"], @r.blpop("foo", 1)
+      assert_equal ["foo", "s3"], @r.blpop("foo", 1)
 
       thread.join
     end
@@ -582,9 +590,9 @@ class RedisDistributedTest < Test::Unit::TestCase
         redis.rpush("foo", "s3")
       end
 
-      assert_equal @r.brpop("foo", 0.1), ["foo", "s2"]
-      assert_equal @r.brpop("foo", 0.1), ["foo", "s1"]
-      assert_equal @r.brpop("foo", 0.4), ["foo", "s3"]
+      assert_equal ["foo", "s2"], @r.brpop("foo", 1)
+      assert_equal ["foo", "s1"], @r.brpop("foo", 1)
+      assert_equal ["foo", "s3"], @r.brpop("foo", 1)
 
       t.join
     end
