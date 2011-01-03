@@ -1,3 +1,35 @@
+test "BLPOP" do |r|
+  r.lpush("foo", "s1")
+  r.lpush("foo", "s2")
+
+  thread = Thread.new do
+    sleep 0.3
+    r.dup.lpush("foo", "s3")
+  end
+
+  assert ["foo", "s2"] == r.blpop("foo", 1)
+  assert ["foo", "s1"] == r.blpop("foo", 1)
+  assert ["foo", "s3"] == r.blpop("foo", 1)
+
+  thread.join
+end
+
+test "BRPOP" do |r|
+  r.rpush("foo", "s1")
+  r.rpush("foo", "s2")
+
+  t = Thread.new do
+    sleep 0.3
+    r.dup.rpush("foo", "s3")
+  end
+
+  assert ["foo", "s2"] == r.brpop("foo", 1)
+  assert ["foo", "s1"] == r.brpop("foo", 1)
+  assert ["foo", "s3"] == r.brpop("foo", 1)
+
+  t.join
+end
+
 test "RPUSH" do |r|
   r.rpush "foo", "s1"
   r.rpush "foo", "s2"
@@ -89,5 +121,3 @@ test "RPOP" do |r|
   assert "s2" == r.rpop("foo")
   assert 1 == r.llen("foo")
 end
-
-

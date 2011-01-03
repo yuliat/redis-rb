@@ -8,40 +8,6 @@ setup do
   init Redis::Distributed.new(NODES, :logger => ::Logger.new(log))
 end
 
-test "BLPOP" do |r|
-  r.lpush("foo", "s1")
-  r.lpush("foo", "s2")
-
-  thread = Thread.new do
-    redis = Redis::Distributed.new(NODES)
-    sleep 0.3
-    redis.lpush("foo", "s3")
-  end
-
-  assert ["foo", "s2"] == r.blpop("foo", 1)
-  assert ["foo", "s1"] == r.blpop("foo", 1)
-  assert ["foo", "s3"] == r.blpop("foo", 1)
-
-  thread.join
-end
-
-test "BRPOP" do |r|
-  r.rpush("foo", "s1")
-  r.rpush("foo", "s2")
-
-  t = Thread.new do
-    redis = Redis::Distributed.new(NODES)
-    sleep 0.3
-    redis.rpush("foo", "s3")
-  end
-
-  assert ["foo", "s2"] == r.brpop("foo", 1)
-  assert ["foo", "s1"] == r.brpop("foo", 1)
-  assert ["foo", "s3"] == r.brpop("foo", 1)
-
-  t.join
-end
-
 test "BRPOP should unset a configured socket timeout" do |r|
   r = Redis::Distributed.new(NODES, :timeout => 1)
 

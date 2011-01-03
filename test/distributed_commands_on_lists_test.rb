@@ -15,4 +15,3 @@ test "RPOPLPUSH" do |r|
     r.rpoplpush("foo", "bar")
   end
 end
-
