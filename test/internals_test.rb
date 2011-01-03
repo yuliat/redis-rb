@@ -25,3 +25,12 @@ test "Redis.current" do
 
   assert Redis.current.get("foo").nil?
 end
+
+test "can be dup'ed to create a new connection" do |r1, _|
+  clients = r1.info["connected_clients"].to_i
+
+  r2 = r1.dup
+  r2.ping
+
+  assert_equal clients + 1, r1.info["connected_clients"].to_i
+end

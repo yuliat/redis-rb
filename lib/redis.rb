@@ -45,6 +45,8 @@ class Redis
   end
 
   def initialize(options = {})
+    @options = options
+
     if options[:thread_safe]
       @client = Client::ThreadSafe.new(options)
     else
@@ -613,6 +615,10 @@ class Redis
 
   def inspect
     "#<Redis client v#{Redis::VERSION} connected to #{id} (Redis v#{info["redis_version"]})>"
+  end
+
+  def dup
+    self.class.new(@options)
   end
 
   def method_missing(command, *args)

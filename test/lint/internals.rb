@@ -1,6 +1,6 @@
 test "Logger" do |r, log|
   r.ping
-  
+
   assert log.string =~ /Redis >> PING/
   assert log.string =~ /Redis >> \d+\.\d+ms/
 end
@@ -50,4 +50,3 @@ test "raises on protocol errors" do
     end
   end
 end
-

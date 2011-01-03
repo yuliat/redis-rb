@@ -16,7 +16,8 @@ class Redis
     attr_reader :ring
 
     def initialize(urls, options = {})
-      @tag = options.delete(:tag) || /^\{(.+?)\}/
+      @urls = urls
+      @tag = options[:tag] || /^\{(.+?)\}/
       @default_options = options
       @ring = HashRing.new urls.map { |url| Redis.connect(options.merge(:url => url)) }
       @subscribed_node = nil
@@ -513,6 +514,10 @@ class Redis
 
     def pipelined
       raise CannotDistribute, :pipelined
+    end
+
+    def dup
+      self.class.new(@urls, @default_options)
     end
 
   protected
