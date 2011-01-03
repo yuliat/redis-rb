@@ -233,12 +233,16 @@ class Redis
       end
     end
 
-    def blpop(key, timeout)
-      node_for(key).blpop(key, timeout)
+    def blpop(*args)
+      ensure_same_node(:blpop, *(args[0..-2])) do |node|
+        node.blpop(*args)
+      end
     end
 
-    def brpop(key, timeout)
-      node_for(key).brpop(key, timeout)
+    def brpop(*args)
+      ensure_same_node(:brpop, *(args[0..-2])) do |node|
+        node.brpop(*args)
+      end
     end
 
     def sadd(key, value)
@@ -537,9 +541,11 @@ class Redis
     end
 
     def ensure_same_node(command, *keys)
-      tags = keys.map { |key| key_tag(key) }
+      if keys.size > 1
+        tags = keys.map { |key| key_tag(key) }
 
-      raise CannotDistribute, command if !tags.all? || tags.uniq.size != 1
+        raise CannotDistribute, command if !tags.all? || tags.uniq.size != 1
+      end
 
       yield(node_for(keys.first))
     end

@@ -48,3 +48,29 @@ test "RPOPLPUSH" do |r|
   assert ["s1", "s2"] == r.lrange("bar", 0, -1)
 end
 
+test "BLPOP can block on multiple lists" do |r|
+  r.lpush("queue1", "job1")
+  r.lpush("queue2", "job2")
+
+  t = Thread.new do
+    sleep 0.3
+    r.dup.lpush("queue3", "job3")
+  end
+
+  assert_equal ["queue1", "job1"], r.blpop("queue1", "queue2", "queue3", 1)
+  assert_equal ["queue2", "job2"], r.blpop("queue1", "queue2", "queue3", 1)
+  assert_equal ["queue3", "job3"], r.blpop("queue1", "queue2", "queue3", 1)
+
+  t.join
+end
+
+test "BRPOP should restore the timeout even if the command fails" do |r|
+  r.incr "foo"
+
+  assert_raise RuntimeError do
+    r.brpop("foo", 1)
+  end
+
+  # TODO: should be testing a read timeout.
+  assert_equal OPTIONS[:timeout], r.client.timeout
+end
