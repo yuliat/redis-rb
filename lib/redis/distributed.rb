@@ -187,7 +187,20 @@ class Redis
 
     # Get the values of all the given keys.
     def mget(*keys)
-      raise CannotDistribute, :mget
+      keys_per_nodes = {}
+      results = []
+      keys.each do |key|
+        node = node_for(key)
+        keys_per_nodes[node.id] ||= [node, []]
+        keys_per_nodes[node.id][1] << key
+      end
+      result = []
+      keys_per_nodes.values.each do |node, local_keys|
+        node.mget(*local_keys).each_with_index do |result, i|
+          results[keys.index(local_keys[i])] = result
+        end
+      end
+      results
     end
 
     def mapped_mget(*keys)
